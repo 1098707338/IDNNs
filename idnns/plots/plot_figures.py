@@ -18,7 +18,6 @@ import idnns.plots.utils as utils
 import tkFileDialog as filedialog
 from numpy import linalg as LA
 
-from tkinter import filedialog
 LAYERS_COLORS  = ['red', 'blue', 'green', 'yellow', 'pink', 'orange']
 
 def plot_all_epochs(gen_data, I_XT_array, I_TY_array, axes, epochsInds, f, index_i, index_j, size_ind,
