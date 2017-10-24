@@ -2,7 +2,7 @@
 import matplotlib
 matplotlib.use("TkAgg")
 import numpy as np
-import _pickle as cPickle
+import pickle as cPickle
 # import cPickle
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ import matplotlib.animation as animation
 import math
 import os.path
 import idnns.plots.utils as utils
-import tkinter as tk
+import tkFileDialog as filedialog
 from numpy import linalg as LA
 
 from tkinter import filedialog
@@ -26,6 +26,7 @@ def plot_all_epochs(gen_data, I_XT_array, I_TY_array, axes, epochsInds, f, index
     """Plot the infomration plane with the epochs in diffrnet colors """
     #If we want to plot the train and test error
     if plot_error:
+        # this part is getting executed...
         fig_strs = ['train_error','test_error','loss_train','loss_test' ]
         fig_data = [np.squeeze(gen_data[fig_str]) for fig_str in fig_strs]
         f1 = plt.figure(figsize=(12, 8))
@@ -36,7 +37,7 @@ def plot_all_epochs(gen_data, I_XT_array, I_TY_array, axes, epochsInds, f, index
         for i in range(len(fig_data)):
             ax1.plot(epochsInds, fig_data[i],':', linewidth = 3 , label = fig_strs[i])
         ax1.legend(loc='best')
-    f = plt.figure(figsize=(12, 8))
+    f = plt.figure(figsize=(12, 9.5))  # 12, 8
     axes = f.add_subplot(111)
     axes = np.array([[axes]])
 
@@ -281,6 +282,7 @@ def plot_snapshots(name_s, save_name, i, time_stemps=[13, 180, 963],font_size = 
 def load_figures(mode, str_names=None):
     """Creaet new figure based on the mode of it
     This function is really messy and need to rewrite """
+    # define and configure font_size here
     if mode == 0:
         font_size = 34
         axis_font = 28
@@ -332,10 +334,10 @@ def load_figures(mode, str_names=None):
         sizes = [[1010, 1010, 1017], [1020, 1700, 920]]
     # one figure
     if mode == 2 or mode ==6:
-        axis_font = 28
-        bar_font = 28
+        axis_font = 24  # 28
+        bar_font = 24  # 28
         fig_size = (14, 10)
-        font_size = 34
+        font_size = 28  # 34
         f, (axes) = plt.subplots(1, len(str_names), sharey=True, figsize=fig_size)
         if len(str_names) == 1:
             axes = np.vstack(np.array([axes]))
@@ -392,9 +394,13 @@ def plot_figures(str_names, mode, save_name):
             name_s = str_names[i][j]
             #Load data for the given file
             data_array = utils.get_data(name_s)
-            data  = np.squeeze(np.array(data_array['information']))
-            I_XT_array = np.array(extract_array(data, 'local_IXT'))
-            I_TY_array = np.array(extract_array(data, 'local_ITY'))
+            # np.squeeze here, already not supporting multiple repeats
+            data = np.squeeze(np.array(data_array['information']))
+            repeat = False
+            if len(data.shape) == 3:
+                repeat = True
+            I_XT_array = np.array(extract_array(data, 'local_IXT', repeat))
+            I_TY_array = np.array(extract_array(data, 'local_ITY', repeat))   # use extract_array
             # I_XT_array = np.array(extract_array(data, 'IXT_vartional'))
             #I_TY_array = np.array(extract_array(data, 'ITY_vartional'))
             epochsInds = data_array['params']['epochsInds']
@@ -403,21 +409,27 @@ def plot_figures(str_names, mode, save_name):
             #Plot it
             if mode ==3:
                 plot_by_training_samples(I_XT_array, I_TY_array, axes, epochsInds, f, i, j, sizes[i][j], font_size, yticks, xticks, colorbar_axis, title_strs[i][j], axis_font, bar_font, save_name)
-            elif mode ==6:
-                plot_norms(axes, epochsInds,data_array['norms1'],data_array['norms2'])
+            elif mode == 6:
+                plot_norms(axes, epochsInds, data_array['l1_norms'],data_array['l2_norms'])  # changed here is important
             else:
+                # this is the normal version...
+                # Note that we turn off plot_error (because it's just 0), possibly info not saved
                 plot_all_epochs(data_array, I_XT_array, I_TY_array, axes, epochsInds, f, i, j, sizes[i][j], font_size, yticks, xticks,
-                                colorbar_axis, title_strs[i][j], axis_font, bar_font, save_name)
+                                colorbar_axis, title_strs[i][j], axis_font, bar_font, save_name, plot_error=False)
     plt.show()
 
 
 def plot_norms(axes, epochsInds, norms1, norms2):
     """Plot the norm l1 and l2 of the given name"""
+    f = plt.figure(figsize=(12, 8))  # 12, 8
+    axes = f.add_subplot(111)
     axes.plot(epochsInds, np.mean(norms1[:,0,0,:], axis=0), color='g')
     axes.plot(epochsInds, np.mean(norms2[:,0,0,:], axis=0), color='b')
     axes.legend(('L1 norm', 'L2 norm'))
     axes.set_xlabel('Epochs')
 
+# TODO: use this!! might be fun, also can adapt this code to measure distance correlation
+# criticism: hmmm...really? weights are NOT activations...
 def plot_pearson(name):
     """Plot the pearsin coeff of  the neurons for each layer"""
     data_array = utils.get_data(name)
@@ -440,6 +452,7 @@ def plot_pearson(name):
                 person_t = []
                 #Go over the rest of the neurons
                 for neuron_second in range(neuron+1, len(ws_current[layer])):
+                    # pearson correlation between 2 layers
                     pearson_c, p_val =sis.pearsonr(ws_current[layer][neuron], ws_current[layer][neuron_second])
                     person_t.append(pearson_c)
             inner_pearson_mean.append(np.mean(person_t))
@@ -472,9 +485,18 @@ def update_axes(axes, xlabel, ylabel, xlim, ylim, title, xscale, yscale, x_ticks
                      set_xscale=True, yscale=yscale, xscale=xscale, ytick_labels=labels, genreal_scaling=True)
 
 
-
-def extract_array(data, name):
-    results = [[data[j,k][name] for k in range(data.shape[1])] for j in range(data.shape[0])]
+# repeats is still broken....nvmd move on!!
+def extract_array(data, name, repeat=False):
+    if repeat:
+        results = []
+        for r in range(data.shape[0]):
+            results.append([data[r, j, k][name] for k in range(data.shape[2]) for j in range(data.shape[1])])
+        results = np.array(results)
+        print results.shape
+        results = np.mean(results, axis=0)
+        import IPython; IPython.embed()
+    else:
+        results = [[data[j,k][name] for k in range(data.shape[1])] for j in range(data.shape[0])]
     return results
 
 def update_bars_num_of_ts(num, p_ts, H_Xgt,DKL_YgX_YgT, axes, ind_array):
