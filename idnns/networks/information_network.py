@@ -50,15 +50,15 @@ class informationNetwork():
         # load data
         self.data_sets = load_data(self.name, args.random_labels)
         # create arrays for saving the data
-        self.ws, self.grads, self.information, self.models, self.names, self.networks, self.weights = [
+        self.ws, self.grads, self.information, self.models, self.names, self.networks, self.weights, self.weights_l2_norm = [
             [[[[None] for k in range(len(self.train_samples))] for j in range(len(self.layers_sizes))]
-             for i in range(self.num_of_repeats)] for _ in range(7)]
+             for i in range(self.num_of_repeats)] for _ in range(8)]
 
         # l2_norm for what!?
         # (initialize all these 6 values in bulk...), wow, this is really the FULL history of training.
-        self.loss_train, self.loss_test, self.test_error, self.train_error, self.l1_norms, self.l2_norms, self.weights_l2_norm = \
+        self.loss_train, self.loss_test, self.test_error, self.train_error, self.l1_norms, self.l2_norms = \
             [np.zeros((self.num_of_repeats, len(self.layers_sizes), len(self.train_samples), len(self.epochs_indexes)))
-             for _ in range(7)]
+             for _ in range(6)]
 
         params = {'sampleLen': len(self.train_samples),
                   'nDistSmpls': args.nDistSmpls,
